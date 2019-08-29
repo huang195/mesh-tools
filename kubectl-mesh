@@ -1,0 +1,132 @@
+#!/bin/bash
+
+usage () {
+  echo "Usage: kubectl mesh [up|down|enable|disable]"
+  echo "       up: --mode [graph] [--namespace <namespace> --gitrepo <reponame> --gitbranch <branchname>]"
+  echo "       down: [--namespace <namespace>]"
+  echo "       enable: --namespace <namespace> [--pod <podname>]"
+  echo "       disable: --namespace <namespace> [--pod <podname>]"
+  exit 1
+}
+
+debug () {
+  echo "mode = $MODE"
+  echo "params = $OP"
+  echo "namespace = $NAMESPACE"
+  echo "pod = $POD"
+}
+
+OP=""
+
+while (( "$#" )); do
+  case "$1" in
+    -m|--mode)
+      MODE=$2
+      shift 2
+      ;;
+    -n|--namespace)
+      NAMESPACE=$2
+      shift 2
+      ;;
+    -p|--pod)
+      POD=$2
+      shift 2
+      ;;
+    -t|--tag)
+      TAG=$2
+      shift 2
+      ;;
+    --gitrepo)
+      GITREPO=$2
+      shift 2
+      ;;
+    --gitbranch)
+      GITBRANCH=$2
+      shift 2
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -h|--help)
+      usage
+      ;;
+    -*|--*=)
+      echo "Unsupported flag $1" >&2
+      usage
+      ;;
+    *)
+      if [ -z "$OP" ]
+      then
+        OP=$1
+      else
+        usage
+      fi
+      shift
+      ;;
+  esac
+done
+
+NAMESPACE=${NAMESPACE:-istio-mesh}
+TAG=${TAG:-master-20190731-09-16}
+GITREPO=${GITREPO:-http://github.com/canthefason/installer}
+GITBRANCH=${GITBRANCH:-fix-telemetry-non-tls}
+
+#debug
+
+case $OP in
+  "up")
+    # The only mandatory components are Pilot + Mixer. Pilot is to make Envoy work, and Mixer for collecting telemetry data.
+    # We are enabling other components due to "uncut" dependencies, e.g., Envoy doesn't seem to work without Citadel generating secrets/certs.
+    git clone $GITREPO -b $GITBRANCH /tmp/installer
+    cd /tmp/installer
+    TAG=$TAG bin/iop $NAMESPACE citadel ./security/citadel  --set global.istioNamespace=$NAMESPACE --set global.configNamespace=$NAMESPACE --set global.telemetryNamespace=$NAMESPACE --set global.policyNamespace=$NAMESPACE --set global.controlPlaneSecurityEnabled=false
+    TAG=$TAG bin/iop $NAMESPACE istio-discovery ./istio-control/istio-discovery --set global.istioNamespace=$NAMESPACE --set global.configNamespace=$NAMESPACE --set global.telemetryNamespace=$NAMESPACE --set global.policyNamespace=$NAMESPACE --set global.controlPlaneSecurityEnabled=false --set pilot.useMCP=false
+    TAG=$TAG bin/iop $NAMESPACE istio-mixer ./istio-telemetry/mixer-telemetry --set global.istioNamespace=$NAMESPACE --set global.configNamespace=$NAMESPACE --set global.telemetryNamespace=$NAMESPACE --set global.policyNamespace=$NAMESPACE --set global.controlPlaneSecurityEnabled=false --set mixer.telemetry.useMCP=false
+    TAG=$TAG bin/iop $NAMESPACE prometheus ./istio-telemetry/prometheus --set global.istioNamespace=$NAMESPACE --set global.configNamespace=$NAMESPACE --set global.telemetryNamespace=$NAMESPACE --set global.policyNamespace=$NAMESPACE --set prometheus.security.enabled=false
+    TAG=$TAG bin/iop $NAMESPACE kiali ./istio-telemetry/kiali --set global.istioNamespace=$NAMESPACE --set global.configNamespace=$NAMESPACE --set global.telemetryNamespace=$NAMESPACE --set global.policyNamespace=$NAMESPACE --set kiali.security.enabled=false --set global.prometheusNamespace=$NAMESPACE
+    TAG=$TAG bin/iop $NAMESPACE istio-autoinject ./istio-control/istio-autoinject --set global.istioNamespace=$NAMESPACE --set global.configNamespace=$NAMESPACE --set global.telemetryNamespace=$NAMESPACE --set global.policyNamespace=$NAMESPACE --set global.controlPlaneSecurityEnabled=false
+    ;;
+  "down")
+    kubectl delete namespace $NAMESPACE
+    for m in `kubectl get mutatingwebhookconfigurations.admissionregistration.k8s.io| grep istio-sidecar-injector|awk '{print $1}'`; do kubectl delete mutatingwebhookconfigurations.admissionregistration.k8s.io $m; done
+    ;;
+  "enable")
+    # Specify one or more running pods to have sidecar containers injected for instrumentation
+    # i) when both --namespace and --pod are specified, that pod will be instrumented
+    # ii) when only --pod is specified, a pod in the default namespace will be instrumented
+    # iii) when only --namespace is specified, all the pods in that namespace will be instrumented
+    # iv) when no --namespace and --pod are specified, all ods in the default namespace will be instrumented
+    if [ -z $POD ]
+    then
+      if [ ! -z $NAMESPACE ]
+      then 
+        kubectl label namespace $NAMESPACE istio-injection=enabled
+        for m in `kubectl -n $NAMESPACE get pods | awk 'NR>1 {print $1}'`; do kubectl -n $NAMESPACE  delete pod $m --grace-period=1; done
+      else
+        echo "Namespace cannot be empty"
+      fi
+    else
+      echo "not yet supported"
+    fi
+    ;;
+  "disable")
+    if [ -z $POD ]
+    then
+      if [ ! -z $NAMESPACE ]
+      then
+        kubectl label namespace $NAMESPACE istio-injection-
+        for m in `kubectl -n $NAMESPACE get pods | awk 'NR>1 {print $1}'`; do kubectl -n $NAMESPACE  delete pod $m --grace-period=1; done
+      else
+        echo "Namespace cannot be empty"
+      fi
+    else
+      echo "not yet supported"
+    fi
+    ;;
+  *)
+    echo "Mode $OP is not supported"
+    usage
+esac
+
+exit 0
