@@ -102,7 +102,7 @@ case $OP in
       if [ ! -z $NAMESPACE ]
       then 
         kubectl label namespace $NAMESPACE istio-injection=enabled
-        for m in `kubectl -n $NAMESPACE get pods | awk 'NR>1 {print $1}'`; do kubectl -n $NAMESPACE  delete pod $m --grace-period=1; done
+        for m in `kubectl -n $NAMESPACE get pods | awk 'NR>1 {print $1}'`; do kubectl -n $NAMESPACE  delete pod $m --grace-period=0 --force >/dev/null 2>&1; done
       else
         echo "Namespace cannot be empty"
       fi
@@ -116,7 +116,7 @@ case $OP in
       if [ ! -z $NAMESPACE ]
       then
         kubectl label namespace $NAMESPACE istio-injection-
-        for m in `kubectl -n $NAMESPACE get pods | awk 'NR>1 {print $1}'`; do kubectl -n $NAMESPACE  delete pod $m --grace-period=1; done
+        for m in `kubectl -n $NAMESPACE get pods | awk 'NR>1 {print $1}'`; do kubectl -n $NAMESPACE  delete pod $m --grace-period=0 --force >/dev/null 2>&1; done
       else
         echo "Namespace cannot be empty"
       fi
