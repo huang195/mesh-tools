@@ -11,7 +11,7 @@ kubectl version 1.12+
 ## Installation Kubectl plugin
 
 ```
-wget https://raw.githubusercontent.com/huang195/mesh-tools/master/kubectl-mesh -O /usr/local/bin/kubectl-mesh
+wget https://raw.githubusercontent.com/huang195/mesh-tools/master/kubectl-mesh -O /usr/local/bin/kubectl-mesh && chmod 755 /usr/local/bin/kubectl-mesh
 ```
 
 ## Enable service mesh 
