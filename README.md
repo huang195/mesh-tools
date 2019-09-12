@@ -4,7 +4,8 @@ Making the use of service mesh in k8s easier
 
 # Pre-reqs
 
-kubectl version 1.12+
+kubectl: version 1.12+
+git
 
 # Quick start
 
