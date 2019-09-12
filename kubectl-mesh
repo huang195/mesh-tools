@@ -2,7 +2,7 @@
 
 usage () {
   echo "Usage: kubectl mesh [up|down|enable|disable]"
-  echo "       up: --mode [graph] [--namespace <namespace> --gitrepo <reponame> --gitbranch <branchname>]"
+  echo "       up: [--mode [graph|canary]] [--namespace <namespace> --gitrepo <reponame> --gitbranch <branchname>]"
   echo "       down: [--namespace <namespace>]"
   echo "       enable: --namespace <namespace> [--pod <podname>]"
   echo "       disable: --namespace <namespace> [--pod <podname>]"
