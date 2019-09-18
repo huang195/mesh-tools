@@ -9,7 +9,7 @@ git
 
 # Quick start
 
-## Installation Kubectl plugin
+## Installation
 
 ```
 wget https://raw.githubusercontent.com/huang195/mesh-tools/master/kubectl-mesh -O /usr/local/bin/kubectl-mesh && chmod 755 /usr/local/bin/kubectl-mesh
