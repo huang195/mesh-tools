@@ -18,14 +18,9 @@ wget https://raw.githubusercontent.com/huang195/mesh-tools/master/kubectl-mesh -
 ## Enable service mesh 
 
 ```
-kubectl mesh up [--mode debug|canary|graph]
+kubectl mesh up [--mode canary|graph|tracing]
 ```
-
-## Disable service mesh
-
-```
-kubectl mesh down
-```
+Note: `graph` mode is the default mode
 
 ## Instrument an app
 
@@ -53,3 +48,10 @@ or for a particular pod
 ```
 kubectl mesh disable --namespace user1 --pod pod1
 ```
+
+## Disable service mesh
+
+```
+kubectl mesh down
+```
+
