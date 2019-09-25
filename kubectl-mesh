@@ -2,8 +2,8 @@
 
 usage () {
   echo "Usage: kubectl mesh [up|down|enable|disable]"
-  echo "       up: [--mode [graph|canary]] [--namespace <namespace> --gitrepo <reponame> --gitbranch <branchname>]"
-  echo "       down: [--namespace <namespace>]"
+  echo "       up: [--mode [graph|canary]] [--cnamespace <control_namespace> --gitrepo <reponame> --gitbranch <branchname>]"
+  echo "       down: [--cnamespace <control_namespace>]"
   echo "       enable: --namespace <namespace> [--pod <podname>]"
   echo "       disable: --namespace <namespace> [--pod <podname>]"
   exit 1
@@ -12,6 +12,7 @@ usage () {
 debug () {
   echo "mode = $MODE"
   echo "params = $OP"
+  echo "control_namespace = $CNAMESPACE"
   echo "namespace = $NAMESPACE"
   echo "pod = $POD"
 }
@@ -24,8 +25,12 @@ while (( "$#" )); do
       MODE=$2
       shift 2
       ;;
-    -n|--namespace)
+    -n|-namespace)
       NAMESPACE=$2
+      shift 2
+      ;;
+    -cn|--cnamespace)
+      CNAMESPACE=$2
       shift 2
       ;;
     -p|--pod)
@@ -67,7 +72,8 @@ while (( "$#" )); do
   esac
 done
 
-NAMESPACE=${NAMESPACE:-istio-mesh}
+NAMESPACE=${NAMESPACE:-default}
+CNAMESPACE=${CNAMESPACE:-istio-mesh}
 TAG=${TAG:-master-20190731-09-16}
 #GITREPO=${GITREPO:-http://github.com/canthefason/installer}
 #GITBRANCH=${GITBRANCH:-fix-telemetry-non-tls}
@@ -87,20 +93,20 @@ case "$OP" in
 
     case "$MODE" in
       ""|"graph")
-        TAG=$TAG bin/iop $NAMESPACE citadel ./security/citadel  --set global.istioNamespace=$NAMESPACE --set global.configNamespace=$NAMESPACE --set global.telemetryNamespace=$NAMESPACE --set global.policyNamespace=$NAMESPACE --set global.controlPlaneSecurityEnabled=false
-        TAG=$TAG bin/iop $NAMESPACE istio-discovery ./istio-control/istio-discovery --set global.istioNamespace=$NAMESPACE --set global.configNamespace=$NAMESPACE --set global.telemetryNamespace=$NAMESPACE --set global.policyNamespace=$NAMESPACE --set global.controlPlaneSecurityEnabled=false --set pilot.useMCP=false
-        TAG=$TAG bin/iop $NAMESPACE istio-mixer ./istio-telemetry/mixer-telemetry --set global.istioNamespace=$NAMESPACE --set global.configNamespace=$NAMESPACE --set global.telemetryNamespace=$NAMESPACE --set global.policyNamespace=$NAMESPACE --set global.controlPlaneSecurityEnabled=false --set mixer.telemetry.useMCP=false
-        TAG=$TAG bin/iop $NAMESPACE prometheus ./istio-telemetry/prometheus --set global.istioNamespace=$NAMESPACE --set global.configNamespace=$NAMESPACE --set global.telemetryNamespace=$NAMESPACE --set global.policyNamespace=$NAMESPACE --set prometheus.security.enabled=false
-        TAG=$TAG bin/iop $NAMESPACE kiali ./istio-telemetry/kiali --set global.istioNamespace=$NAMESPACE --set global.configNamespace=$NAMESPACE --set global.telemetryNamespace=$NAMESPACE --set global.policyNamespace=$NAMESPACE --set kiali.security.enabled=false --set global.prometheusNamespace=$NAMESPACE
-        TAG=$TAG bin/iop $NAMESPACE istio-autoinject ./istio-control/istio-autoinject --set global.istioNamespace=$NAMESPACE --set global.configNamespace=$NAMESPACE --set global.telemetryNamespace=$NAMESPACE --set global.policyNamespace=$NAMESPACE --set global.controlPlaneSecurityEnabled=false
+        TAG=$TAG bin/iop $CNAMESPACE citadel ./security/citadel  --set global.istioNamespace=$CNAMESPACE --set global.configNamespace=$CNAMESPACE --set global.telemetryNamespace=$CNAMESPACE --set global.policyNamespace=$CNAMESPACE --set global.controlPlaneSecurityEnabled=false
+        TAG=$TAG bin/iop $CNAMESPACE istio-discovery ./istio-control/istio-discovery --set global.istioNamespace=$CNAMESPACE --set global.configNamespace=$CNAMESPACE --set global.telemetryNamespace=$CNAMESPACE --set global.policyNamespace=$CNAMESPACE --set global.controlPlaneSecurityEnabled=false --set pilot.useMCP=false
+        TAG=$TAG bin/iop $CNAMESPACE istio-mixer ./istio-telemetry/mixer-telemetry --set global.istioNamespace=$CNAMESPACE --set global.configNamespace=$CNAMESPACE --set global.telemetryNamespace=$CNAMESPACE --set global.policyNamespace=$CNAMESPACE --set global.controlPlaneSecurityEnabled=false --set mixer.telemetry.useMCP=false
+        TAG=$TAG bin/iop $CNAMESPACE prometheus ./istio-telemetry/prometheus --set global.istioNamespace=$CNAMESPACE --set global.configNamespace=$CNAMESPACE --set global.telemetryNamespace=$CNAMESPACE --set global.policyNamespace=$CNAMESPACE --set prometheus.security.enabled=false
+        TAG=$TAG bin/iop $CNAMESPACE kiali ./istio-telemetry/kiali --set global.istioNamespace=$CNAMESPACE --set global.configNamespace=$CNAMESPACE --set global.telemetryNamespace=$CNAMESPACE --set global.policyNamespace=$CNAMESPACE --set kiali.security.enabled=false --set global.prometheusNamespace=$CNAMESPACE
+        TAG=$TAG bin/iop $CNAMESPACE istio-autoinject ./istio-control/istio-autoinject --set global.istioNamespace=$CNAMESPACE --set global.configNamespace=$CNAMESPACE --set global.telemetryNamespace=$CNAMESPACE --set global.policyNamespace=$CNAMESPACE --set global.controlPlaneSecurityEnabled=false --set global.proxy.autoInject=disabled --set sidecarInjectorWebhook.enableNamespacesByDefault=false --set sidecarInjectorWebhook.injectLabel=disabled
         ;;
       "canary")
-        TAG=$TAG bin/iop $NAMESPACE citadel ./security/citadel  --set global.istioNamespace=$NAMESPACE --set global.configNamespace=$NAMESPACE --set global.telemetryNamespace=$NAMESPACE --set global.policyNamespace=$NAMESPACE --set global.controlPlaneSecurityEnabled=false
-        TAG=$TAG bin/iop $NAMESPACE istio-discovery ./istio-control/istio-discovery --set global.istioNamespace=$NAMESPACE --set global.configNamespace=$NAMESPACE --set global.telemetryNamespace=$NAMESPACE --set global.policyNamespace=$NAMESPACE --set global.controlPlaneSecurityEnabled=false --set pilot.useMCP=false
-        TAG=$TAG bin/iop $NAMESPACE istio-mixer ./istio-telemetry/mixer-telemetry --set global.istioNamespace=$NAMESPACE --set global.configNamespace=$NAMESPACE --set global.telemetryNamespace=$NAMESPACE --set global.policyNamespace=$NAMESPACE --set global.controlPlaneSecurityEnabled=false --set mixer.telemetry.useMCP=false
-        TAG=$TAG bin/iop $NAMESPACE prometheus ./istio-telemetry/prometheus --set global.istioNamespace=$NAMESPACE --set global.configNamespace=$NAMESPACE --set global.telemetryNamespace=$NAMESPACE --set global.policyNamespace=$NAMESPACE --set prometheus.security.enabled=false
-        TAG=$TAG bin/iop $NAMESPACE istio-autoinject ./istio-control/istio-autoinject --set global.istioNamespace=$NAMESPACE --set global.configNamespace=$NAMESPACE --set global.telemetryNamespace=$NAMESPACE --set global.policyNamespace=$NAMESPACE --set global.controlPlaneSecurityEnabled=false
-        TAG=$TAG bin/iop $NAMESPACE istio-grafana ./istio-telemetry/grafana --set global.istioNamespace=$NAMESPACE --set global.configNamespace=$NAMESPACE --set global.telemetryNamespace=$NAMESPACE --set global.policyNamespace=$NAMESPACE --set global.controlPlaneSecurityEnabled=false
+        TAG=$TAG bin/iop $CNAMESPACE citadel ./security/citadel  --set global.istioNamespace=$CNAMESPACE --set global.configNamespace=$CNAMESPACE --set global.telemetryNamespace=$CNAMESPACE --set global.policyNamespace=$CNAMESPACE --set global.controlPlaneSecurityEnabled=false
+        TAG=$TAG bin/iop $CNAMESPACE istio-discovery ./istio-control/istio-discovery --set global.istioNamespace=$CNAMESPACE --set global.configNamespace=$CNAMESPACE --set global.telemetryNamespace=$CNAMESPACE --set global.policyNamespace=$CNAMESPACE --set global.controlPlaneSecurityEnabled=false --set pilot.useMCP=false
+        TAG=$TAG bin/iop $CNAMESPACE istio-mixer ./istio-telemetry/mixer-telemetry --set global.istioNamespace=$CNAMESPACE --set global.configNamespace=$CNAMESPACE --set global.telemetryNamespace=$CNAMESPACE --set global.policyNamespace=$CNAMESPACE --set global.controlPlaneSecurityEnabled=false --set mixer.telemetry.useMCP=false
+        TAG=$TAG bin/iop $CNAMESPACE prometheus ./istio-telemetry/prometheus --set global.istioNamespace=$CNAMESPACE --set global.configNamespace=$CNAMESPACE --set global.telemetryNamespace=$CNAMESPACE --set global.policyNamespace=$CNAMESPACE --set prometheus.security.enabled=false
+        TAG=$TAG bin/iop $CNAMESPACE istio-autoinject ./istio-control/istio-autoinject --set global.istioNamespace=$CNAMESPACE --set global.configNamespace=$CNAMESPACE --set global.telemetryNamespace=$CNAMESPACE --set global.policyNamespace=$CNAMESPACE --set global.controlPlaneSecurityEnabled=false
+        TAG=$TAG bin/iop $CNAMESPACE istio-grafana ./istio-telemetry/grafana --set global.istioNamespace=$CNAMESPACE --set global.configNamespace=$CNAMESPACE --set global.telemetryNamespace=$CNAMESPACE --set global.policyNamespace=$CNAMESPACE --set global.controlPlaneSecurityEnabled=false
         ;;
       *)
         usage
@@ -108,7 +114,7 @@ case "$OP" in
     esac
     ;;
   "down")
-    kubectl delete namespace $NAMESPACE
+    kubectl delete namespace $CNAMESPACE
     for m in `kubectl get mutatingwebhookconfigurations.admissionregistration.k8s.io| grep istio-sidecar-injector|awk '{print $1}'`; do kubectl delete mutatingwebhookconfigurations.admissionregistration.k8s.io $m; done
     ;;
   "enable")
@@ -119,13 +125,11 @@ case "$OP" in
     # iv) when no --namespace and --pod are specified, all ods in the default namespace will be instrumented
     if [ -z $POD ]
     then
-      if [ ! -z $NAMESPACE ]
-      then 
-        kubectl label namespace $NAMESPACE istio-injection=enabled
-        for m in `kubectl -n $NAMESPACE get pods | awk 'NR>1 {print $1}'`; do kubectl -n $NAMESPACE  delete pod $m --grace-period=0 --force >/dev/null 2>&1; done
-      else
-        echo "Namespace cannot be empty"
-      fi
+      kubectl label namespace $NAMESPACE istio-env=$CNAMESPACE
+      for m in `kubectl -n $NAMESPACE get deployments | awk 'NR>1 {print $1}'`; 
+      do
+        kubectl -n $NAMESPACE patch deployment $m --type='json' -p='[{"op": "add", "path":"/spec/template/metadata/annotations", "value":{"sidecar.istio.io/inject":"true"}}]'
+      done
     else
       echo "not yet supported"
     fi
@@ -133,13 +137,11 @@ case "$OP" in
   "disable")
     if [ -z $POD ]
     then
-      if [ ! -z $NAMESPACE ]
-      then
-        kubectl label namespace $NAMESPACE istio-injection-
-        for m in `kubectl -n $NAMESPACE get pods | awk 'NR>1 {print $1}'`; do kubectl -n $NAMESPACE  delete pod $m --grace-period=0 --force >/dev/null 2>&1; done
-      else
-        echo "Namespace cannot be empty"
-      fi
+      kubectl label namespace $NAMESPACE istio-env-
+      for m in `kubectl -n $NAMESPACE get deployments | awk 'NR>1 {print $1}'`;
+      do
+        kubectl -n $NAMESPACE patch deployment $m --type='json' -p='[{"op": "replace", "path":"/spec/template/metadata/annotations", "value":{"sidecar.istio.io/inject":"false"}}]'
+      done
     else
       echo "not yet supported"
     fi
