@@ -4,8 +4,8 @@ usage () {
   echo "Usage: kubectl mesh [up|down|enable|disable]"
   echo "       up: [--mode [graph|canary]] [--cnamespace <control_namespace> --gitrepo <reponame> --gitbranch <branchname>]"
   echo "       down: [--cnamespace <control_namespace>]"
-  echo "       enable: --namespace <namespace> [--pod <podname>]"
-  echo "       disable: --namespace <namespace> [--pod <podname>]"
+  echo "       enable: --namespace <namespace> [--deployment <deploymentname>]"
+  echo "       disable: --namespace <namespace> [--deployment <deploymentname>]"
   exit 1
 }
 
@@ -14,7 +14,7 @@ debug () {
   echo "params = $OP"
   echo "control_namespace = $CNAMESPACE"
   echo "namespace = $NAMESPACE"
-  echo "pod = $POD"
+  echo "deployment = $DEPLOYMENT"
 }
 
 OP=""
@@ -33,8 +33,8 @@ while (( "$#" )); do
       CNAMESPACE=$2
       shift 2
       ;;
-    -p|--pod)
-      POD=$2
+    -d|--deployment)
+      DEPLOYMENT=$2
       shift 2
       ;;
     -t|--tag)
@@ -118,12 +118,12 @@ case "$OP" in
     for m in `kubectl get mutatingwebhookconfigurations.admissionregistration.k8s.io| grep istio-sidecar-injector|awk '{print $1}'`; do kubectl delete mutatingwebhookconfigurations.admissionregistration.k8s.io $m; done
     ;;
   "enable")
-    # Specify one or more running pods to have sidecar containers injected for instrumentation
-    # i) when both --namespace and --pod are specified, that pod will be instrumented
-    # ii) when only --pod is specified, a pod in the default namespace will be instrumented
-    # iii) when only --namespace is specified, all the pods in that namespace will be instrumented
-    # iv) when no --namespace and --pod are specified, all ods in the default namespace will be instrumented
-    if [ -z $POD ]
+    # Specify one or more running deployments to have sidecar containers injected for instrumentation
+    # i) when both --namespace and --deployment are specified, that deployment will be instrumented
+    # ii) when only --deployment is specified, a deployment in the default namespace will be instrumented
+    # iii) when only --namespace is specified, all the deployments in that namespace will be instrumented
+    # iv) when no --namespace and --deployment are specified, all ods in the default namespace will be instrumented
+    if [ -z $DEPLOYMENT ]
     then
       kubectl label namespace $NAMESPACE istio-env=$CNAMESPACE
       for m in `kubectl -n $NAMESPACE get deployments | awk 'NR>1 {print $1}'`; 
@@ -131,11 +131,12 @@ case "$OP" in
         kubectl -n $NAMESPACE patch deployment $m --type='json' -p='[{"op": "add", "path":"/spec/template/metadata/annotations", "value":{"sidecar.istio.io/inject":"true"}}]'
       done
     else
-      echo "not yet supported"
+      kubectl label namespace $NAMESPACE istio-env=$CNAMESPACE
+      kubectl -n $NAMESPACE patch deployment $DEPLOYMENT --type='json' -p='[{"op": "add", "path":"/spec/template/metadata/annotations", "value":{"sidecar.istio.io/inject":"true"}}]'
     fi
     ;;
   "disable")
-    if [ -z $POD ]
+    if [ -z $DEPLOYMENT ]
     then
       kubectl label namespace $NAMESPACE istio-env-
       for m in `kubectl -n $NAMESPACE get deployments | awk 'NR>1 {print $1}'`;
@@ -143,7 +144,8 @@ case "$OP" in
         kubectl -n $NAMESPACE patch deployment $m --type='json' -p='[{"op": "replace", "path":"/spec/template/metadata/annotations", "value":{"sidecar.istio.io/inject":"false"}}]'
       done
     else
-      echo "not yet supported"
+      kubectl label namespace $NAMESPACE istio-env-
+      kubectl -n $NAMESPACE patch deployment $DEPLOYMENT --type='json' -p='[{"op": "replace", "path":"/spec/template/metadata/annotations", "value":{"sidecar.istio.io/inject":"false"}}]'
     fi
     ;;
   *)
