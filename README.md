@@ -36,6 +36,9 @@ or for a particular pod
 kubectl mesh enable --namespace user1 --pod pod1
 ```
 
+### Observe service graph
+![](data/service.gif)
+
 ### Un-instrument the app
 
 Either for all the pods in a namespace
