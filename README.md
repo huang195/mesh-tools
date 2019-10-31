@@ -38,6 +38,7 @@ kubectl mesh enable --namespace user1 --pod pod1
 
 ### Observe service graph
 ![](data/graph.gif)
+[![Tutorial](https://img.youtube.com/vi/mhxlBfTRcJM/hqdefault.jpg)](https://youtu.be/mhxlBfTRcJM)
 
 ### Un-instrument the app
 
